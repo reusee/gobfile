@@ -18,7 +18,7 @@ func init() {
 }
 
 type File struct {
-	obj      interface{}
+	Obj      interface{}
 	portLock net.Listener
 	cbs      chan func()
 	path     string
@@ -32,7 +32,7 @@ func New(obj interface{}, path string, lockPort int) (*File, error) {
 
 	// init
 	file := &File{
-		obj:  obj,
+		Obj:  obj,
 		cbs:  make(chan func()),
 		path: path,
 	}
@@ -48,7 +48,7 @@ func New(obj interface{}, path string, lockPort int) (*File, error) {
 	dbFile, err := os.Open(path)
 	if err == nil {
 		defer dbFile.Close()
-		err = gob.NewDecoder(dbFile).Decode(file.obj)
+		err = gob.NewDecoder(dbFile).Decode(file.Obj)
 		if err != nil {
 			return nil, err
 		}
@@ -73,14 +73,14 @@ func (f *File) Save() (err error) {
 	done.Lock()
 	f.cbs <- func() {
 		defer done.Unlock()
-		tmpPath := f.path + strconv.FormatInt(rand.Int63(), 10)
+		tmpPath := f.path + "." + strconv.FormatInt(rand.Int63(), 10)
 		var tmpF *os.File
 		tmpF, err = os.Create(tmpPath)
 		if err != nil {
 			return
 		}
 		defer tmpF.Close()
-		err = gob.NewEncoder(tmpF).Encode(f.obj)
+		err = gob.NewEncoder(tmpF).Encode(f.Obj)
 		if err != nil {
 			return
 		}
