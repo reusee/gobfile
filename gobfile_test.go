@@ -67,15 +67,45 @@ func TestLockFail(t *testing.T) {
 	port := rand.Intn(20000) + 30000
 	path := filepath.Join(os.TempDir(), "gobfile-test-"+strconv.FormatInt(rand.Int63(), 10))
 	obj := struct{}{}
-	_, err := New(&obj, path, NewPortLocker(port))
+	f1, err := New(&obj, path, NewPortLocker(port))
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	_, err = New(&obj, path, NewPortLocker(port))
 	if err == nil || err.Error() != "lock fail" {
 		t.Fatal("should fail")
 	}
+	f1.Close()
+}
+
+func TestLockFail2(t *testing.T) {
+	lockFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("gobfile-test-lock-%d", rand.Int63()))
+	path := filepath.Join(os.TempDir(), "gobfile-test-"+strconv.FormatInt(rand.Int63(), 10))
+	obj := struct{}{}
+	f1, err := New(&obj, path, NewFileLocker(lockFilePath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f1.Close()
+	_, err = New(&obj, path, NewFileLocker(lockFilePath))
+	if err == nil || err.Error() != "lock fail" {
+		t.Fatal("should fail")
+	}
+}
+
+func TestLockFail3(t *testing.T) {
+	lockFilePath := os.TempDir()
+	path := filepath.Join(os.TempDir(), "gobfile-test-"+strconv.FormatInt(rand.Int63(), 10))
+	obj := struct{}{}
+	func() {
+		defer func() {
+			if err := recover(); err == nil || !strings.HasPrefix(err.(string), fmt.Sprintf("open lock file %s error", os.TempDir())) {
+				fmt.Printf("%v\n", err.(string))
+				t.Fatal("should fail")
+			}
+		}()
+		New(&obj, path, NewFileLocker(lockFilePath))
+	}()
 }
 
 func TestCorruptedFile(t *testing.T) {

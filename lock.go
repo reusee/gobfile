@@ -3,6 +3,8 @@ package gobfile
 import (
 	"fmt"
 	"net"
+	"os"
+	"syscall"
 	"time"
 )
 
@@ -31,4 +33,27 @@ func NewPortLocker(port int) *PortLocker {
 	return &PortLocker{
 		port: port,
 	}
+}
+
+type FileLocker struct {
+	file *os.File
+}
+
+func NewFileLocker(path string) *FileLocker {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		panic(fmt.Sprintf("open lock file %s error %v", path, err))
+	}
+	return &FileLocker{
+		file: file,
+	}
+}
+
+func (l *FileLocker) Lock() {
+	syscall.Flock(int(l.file.Fd()), syscall.LOCK_EX)
+}
+
+func (l *FileLocker) Unlock() {
+	syscall.Flock(int(l.file.Fd()), syscall.LOCK_UN)
+	l.file.Close()
 }
